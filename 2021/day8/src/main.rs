@@ -1,20 +1,20 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs::File,
-    hash::Hash,
     io::{BufRead, BufReader},
 };
 
 use anyhow::{Context, Result};
 
 fn main() -> Result<()> {
-    // part_one()?;
+    part_one()?;
     part_two()?;
     Ok(())
 }
 
 fn part_two() -> Result<()> {
     // a:8, b:6, c:8, d:7, e:4, f:9, g:7
+    // 0,6,9:6, 2,3,5:5, 1:2, 4:4, 7:3, 8:7
     let mut f = BufReader::new(File::open("input.txt")?);
     let mut buf = String::new();
     let mut tens = Vec::new();
@@ -27,7 +27,7 @@ fn part_two() -> Result<()> {
                 .map(|s| {
                     let mut v = s.as_bytes().to_vec();
                     v.sort();
-                    v
+                    String::from_utf8(v).unwrap()
                 })
                 .collect::<Vec<_>>(),
         );
@@ -38,61 +38,102 @@ fn part_two() -> Result<()> {
                 .map(|s| {
                     let mut v = s.as_bytes().to_vec();
                     v.sort();
-                    v
+                    String::from_utf8(v).unwrap()
                 })
                 .collect::<Vec<_>>(),
         );
         buf.clear();
     }
-    for i in 0..tens.len() {
-        let mut occurs: HashMap<u8, i32> = HashMap::new();
-        let mut byte_map: HashMap<u8, u8> = HashMap::new();
-        let mut one = &tens[0][0];
-        let mut four = &tens[0][0];
-        let mut seven = &tens[0][0];
-        let mut eight = &tens[0][0];
-        for word in &tens[i] {
+    let mut ans = 0;
+    for (i, list) in tens.iter().enumerate() {
+        let mut number2word: HashMap<usize, &String> = HashMap::new();
+        let mut word2number: HashMap<String, usize> = HashMap::new();
+        let mut five = Vec::new();
+        let mut six = Vec::new();
+        for word in list {
             match word.len() {
-                2 => one = word,
-                4 => four = word,
-                3 => seven = word,
-                7 => eight = word,
-                _ => (),
-            };
-            for c in word {
-                *occurs.entry(*c).or_default() += 1;
+                2 => {
+                    number2word.insert(1, word);
+                    word2number.insert(word.clone(), 1);
+                }
+                4 => {
+                    number2word.insert(4, word);
+                    word2number.insert(word.clone(), 4);
+                }
+                3 => {
+                    number2word.insert(7, word);
+                    word2number.insert(word.clone(), 7);
+                }
+                7 => {
+                    number2word.insert(8, word);
+                    word2number.insert(word.clone(), 8);
+                }
+                5 => five.push(word),
+                6 => six.push(word),
+                _ => unreachable!(),
             }
         }
-        dbg!(&tens[i]);
-        dbg!(&occurs);
-        for (k, v) in occurs {
-            match v {
-                4 => {
-                    // e
-                    byte_map.insert(k, 'e' as u8);
-                }
-                6 => {
-                    // b
-                    byte_map.insert(k, 'b' as u8);
-                }
-                9 => {
-                    // f
-                    byte_map.insert(k, 'f' as u8);
-                    // c
-                    if one[0] == k {
-                        byte_map.insert(one[1], 'c' as u8);
-                    } else {
-                        byte_map.insert(one[0], 'c' as u8);
-                    }
-                }
-                _ => (),
-            };
+        // 3
+        let mut p = 0;
+        for (i, w) in five.iter().enumerate() {
+            if dif(number2word[&1], w) == 3 {
+                number2word.insert(3, w);
+                word2number.insert((*w).clone(), 3);
+                p = i;
+                break;
+            }
         }
-        break;
+        five.remove(p);
+        // 9
+        for (i, w) in six.iter().enumerate() {
+            if dif(number2word[&3], w) == 1 {
+                number2word.insert(9, w);
+                word2number.insert((*w).clone(), 9);
+                p = i;
+                break;
+            }
+        }
+        six.remove(p);
+        // 0
+        for (i, w) in six.iter().enumerate() {
+            if dif(number2word[&7], w) == 3 {
+                number2word.insert(0, w);
+                word2number.insert((*w).clone(), 0);
+                p = i;
+                break;
+            }
+        }
+        six.remove(p);
+        // 6
+        number2word.insert(6, six[0]);
+        word2number.insert(six[0].clone(), 6);
+        // 5 && 2
+        if dif(number2word[&6], five[0]) == 1 {
+            number2word.insert(5, five[0]);
+            word2number.insert(five[0].clone(), 5);
+            number2word.insert(2, five[1]);
+            word2number.insert(five[1].clone(), 2);
+        } else {
+            number2word.insert(5, five[1]);
+            word2number.insert(five[1].clone(), 5);
+            number2word.insert(2, five[0]);
+            word2number.insert(five[0].clone(), 2);
+        }
+        let mut now = 0;
+        for output in &outputs[i] {
+            now *= 10;
+            now += word2number[output];
+        }
+        ans += now;
     }
+    dbg!(ans);
     Ok(())
 }
-
+fn dif(word1: &String, word2: &String) -> usize {
+    let set1: HashSet<_> = word1.chars().collect();
+    let set2: HashSet<_> = word2.chars().collect();
+    set1.symmetric_difference(&set2).count()
+}
 fn part_one() -> Result<()> {
     let mut f = BufReader::new(File::open("input.txt")?);
     let mut buf = String::new();
