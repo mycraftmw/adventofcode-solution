@@ -16,7 +16,26 @@ fn main() -> Result<()> {
         )
     }
     part_one(map.clone());
+    part_two(map.clone());
     Ok(())
+}
+
+fn part_two(mut map: Vec<Vec<i32>>) {
+    let mut step = 0;
+    loop {
+        step += 1;
+        // for each step
+        for i in 0..map.len() {
+            for j in 0..map[i].len() {
+                power_up(&mut map, i, j);
+            }
+        }
+        let this_time = count_and_clear(&mut map);
+        if this_time == 100 {
+            dbg!(step);
+            break;
+        }
+    }
 }
 
 fn part_one(mut map: Vec<Vec<i32>>) {
